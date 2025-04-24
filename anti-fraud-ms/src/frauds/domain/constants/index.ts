@@ -1,0 +1,1 @@
+export const TRANSACTION_AMOUNT_MAX_LIMIT = 1000;

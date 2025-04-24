@@ -1,19 +1,58 @@
 version: "3.7"
 services:
+  anti-fraud-ms:
+    build:
+      context: ./anti-fraud-ms
+      dockerfile: ./Dockerfile
+    restart: always
+    environment:
+      NODE_ENV: development
+      KAFKA_BROKER: kafka:29092
+      KAFKA_GROUP_ID: anti-fraud-consumer
+    depends_on:
+      - setup-kafka
+  transactions-ms:
+    build:
+      context: ./transactions-ms
+      dockerfile: ./Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: transactions
+      DB_PORT: "5432"
+      KAFKA_BROKER: kafka:29092
+      KAFKA_GROUP_ID: transaction-consumer
+    depends_on:
+      - anti-fraud-ms
+      - postgres
+      - setup-kafka
+
   postgres:
     image: postgres:14
+    restart: always
     ports:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=transactions
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
   zookeeper:
     image: confluentinc/cp-zookeeper:5.5.3
+    platform: linux/amd64
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
   kafka:
     image: confluentinc/cp-enterprise-kafka:5.5.3
-    depends_on: [zookeeper]
+    depends_on:
+      - zookeeper
+    platform: linux/amd64
     environment:
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
@@ -23,3 +62,38 @@ services:
       KAFKA_JMX_PORT: 9991
     ports:
       - 9092:9092
+  setup-kafka:
+    image: confluentinc/cp-enterprise-kafka:5.5.3
+    depends_on:
+      - kafka
+    platform: linux/amd64
+    volumes:
+      - ./scripts:/app/scripts
+    command: ["sh", "/app/scripts/setup-kafka.sh"]
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    depends_on:
+      - kafka
+      - zookeeper
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_DEBUG: "true"
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - zookeeper
+      - schema-registry
+    ports:
+      - 8080:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081

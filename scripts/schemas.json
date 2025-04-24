@@ -1,0 +1,11 @@
+[
+  {
+    "schema": "{\"type\":\"record\",\"name\":\"TransactionCreatedValue\",\"fields\":[{\"name\":\"transactionExternalId\",\"type\":\"string\"},{\"name\":\"accountExternalIdDebit\",\"type\":\"string\"},{\"name\":\"accountExternalIdCredit\",\"type\":\"string\"},{\"name\":\"transferTypeId\",\"type\":\"int\"},{\"name\":\"value\",\"type\":\"double\"}]}"
+  },
+  {
+    "schema": "{\"type\":\"record\",\"name\":\"TransactionApprovedValue\",\"fields\":[{\"name\":\"transactionExternalId\",\"type\":\"string\"}]}"
+  },
+  {
+    "schema": "{\"type\":\"record\",\"name\":\"TransactionRejectedValue\",\"fields\":[{\"name\":\"transactionExternalId\",\"type\":\"string\"}]}"
+  }
+]
